@@ -54,3 +54,7 @@ app.delete('/api/articles/:id', (req, res) => {
 });
 
 module.exports = app;
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`服务器正在运行，端口 ${PORT}`);
+});
