@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>泽_瑞的个人空间</title>
-    <!-- 引入本地 Supabase 库（沿用你之前下载好的） -->
     <script src="./supabase.js"></script>
     <script>
         const SUPABASE_URL = 'https://wqjjwthsfkmylgbddknk.supabase.co';
@@ -12,7 +11,6 @@
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     </script>
     <style>
-        /* 原有样式保留 */
         :root{
             --blue-50:#f0f8ff; --blue-100:#e3f2fd; --blue-200:#bbdefb; --blue-300:#90caf9;
             --blue-500:#42a5f5; --blue-700:#1565c0; --blue-900:#0d47a1;
@@ -30,8 +28,14 @@
         
         /* 登录遮罩层样式 */
         #loginOverlay { position:fixed; inset:0; background:rgba(13,71,161,.6); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:1000; }
-        .login-box { background:#fff; padding:40px; border-radius:18px; width:100%; max-width:400px; text-align:center; border-top:6px solid var(--cyan-500); box-shadow:0 24px 60px rgba(13,71,161,.4); }
+        .login-box { background:#fff; padding:30px 40px 40px; border-radius:18px; width:100%; max-width:420px; text-align:center; border-top:6px solid var(--cyan-500); box-shadow:0 24px 60px rgba(13,71,161,.4); }
         .login-box h2 { margin:0 0 20px; color:var(--blue-900); }
+        
+        /* 切换 Tab */
+        .auth-tabs { display:flex; margin-bottom:20px; border-bottom:1px solid var(--blue-100); }
+        .auth-tab { flex:1; padding:10px; font-size:15px; cursor:pointer; color:#888; border-bottom:3px solid transparent; transition:all .2s; }
+        .auth-tab.active { color:var(--cyan-700); border-bottom-color:var(--cyan-500); font-weight:bold; }
+        
         .login-box input { width:100%; padding:12px; margin-bottom:14px; border:1px solid var(--blue-200); border-radius:10px; font-size:14px; outline:none; }
         .login-box input:focus { border-color:var(--cyan-500); box-shadow:0 0 0 3px rgba(38,198,218,.18); }
         
@@ -102,23 +106,39 @@
 </head>
 <body>
 
-<!-- ================= 1. 登录遮罩层（未登录可见） ================= -->
+<!-- ================= 1. 登录/注册遮罩层 ================= -->
 <div id="loginOverlay">
     <div class="login-box">
         <h2>泽_瑞的个人空间</h2>
-        <p style="color:var(--cyan-700); margin-bottom:20px;">请使用 UID 和密码登录</p>
-        <input type="number" id="loginUid" placeholder="请输入 UID (例如: 0)">
-        <input type="password" id="loginPassword" placeholder="请输入密码">
-        <button class="btn primary" style="width:100%; padding:12px;" id="loginBtn">Log In</button>
+        
+        <div class="auth-tabs">
+            <div class="auth-tab active" id="tabLogin">登录</div>
+            <div class="auth-tab" id="tabRegister">注册</div>
+        </div>
+
+        <!-- 登录表单 -->
+        <div id="loginForm">
+            <input type="text" id="loginAccount" placeholder="用户名 或 邮箱">
+            <input type="password" id="loginPassword" placeholder="密码">
+            <button class="btn primary" style="width:100%; padding:12px; margin-top:10px;" id="loginBtn">Log In</button>
+        </div>
+
+        <!-- 注册表单 -->
+        <div id="registerForm" class="hidden">
+            <input type="text" id="regUsername" placeholder="设置用户名 (唯一)">
+            <input type="email" id="regEmail" placeholder="绑定邮箱 (用于找回/唯一)">
+            <input type="password" id="regPassword" placeholder="设置密码">
+            <button class="btn primary" style="width:100%; padding:12px; margin-top:10px;" id="registerBtn">立即注册</button>
+        </div>
     </div>
 </div>
 
-<!-- ================= 2. 主界面（登录后可见） ================= -->
+<!-- ================= 2. 主界面 ================= -->
 <div id="mainApp" class="hidden">
     <header class="site-header">
         <div class="user-bar">
             <span id="currentUserLabel"></span>
-            <button class="btn ghost" id="profileBtn">修改密码</button>
+            <button class="btn ghost" id="profileBtn">个人设置</button>
             <button class="btn ghost" id="manageUsersBtn">用户管理</button>
             <button class="btn danger" id="logoutBtn">退出</button>
         </div>
@@ -189,11 +209,13 @@
 <!-- ================= 4. 个人设置弹窗 ================= -->
 <div class="modal hidden" id="profileModal">
     <div class="modal-box">
-        <h3>修改个人资料</h3>
-        <label style="font-size:13px; color:var(--blue-700);">新用户名</label>
+        <h3>个人设置</h3>
+        <label style="font-size:13px; color:var(--blue-700);">用户名</label>
         <input type="text" id="profileUsername">
-        <label style="font-size:13px; color:var(--blue-700);">新密码</label>
-        <input type="password" id="profilePassword" placeholder="不修改请留空">
+        <label style="font-size:13px; color:var(--blue-700);">邮箱</label>
+        <input type="email" id="profileEmail">
+        <label style="font-size:13px; color:var(--blue-700);">新密码 (不修改请留空)</label>
+        <input type="password" id="profilePassword" placeholder="留空则不修改">
         <div class="actions">
             <button class="btn ghost" onclick="document.getElementById('profileModal').classList.add('hidden')">取消</button>
             <button class="btn primary" id="saveProfileBtn">保存修改</button>
@@ -206,8 +228,9 @@
     <div class="modal-box" style="max-width:600px;">
         <h3>用户管理</h3>
         <div style="margin-bottom:20px; border-bottom:1px solid var(--blue-100); padding-bottom:15px;">
-            <h4 style="margin:0 0 10px; color:var(--cyan-700);">注册新用户</h4>
+            <h4 style="margin:0 0 10px; color:var(--cyan-700);">强制注册新用户</h4>
             <input type="text" id="newUserUsername" placeholder="用户名">
+            <input type="email" id="newUserEmail" placeholder="邮箱">
             <input type="password" id="newUserPassword" placeholder="密码">
             <select id="newUserType">
                 <option value="user">普通用户 (user)</option>
@@ -229,83 +252,119 @@
     let toastTimer = null;
 
     function esc(str){ return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-    function toast(msg){ const el = $('#toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 1800); }
+    function toast(msg){ const el = $('#toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2500); }
     function fmtDate(){ const d = new Date(); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
     function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
-    /* ================= 登录/登出逻辑 ================= */
-    async function login() {
-        const uid = $('#loginUid').value.trim();
-        const pwd = $('#loginPassword').value.trim();
-        if (uid === '' || !pwd) return toast('请输入 UID 和密码');
-
-        // 向 Supabase 查询用户
-        const { data, error } = await supabase.from('users').select('*').eq('uid', uid).eq('password', pwd).single();
-        
-        if (error || !data) {
-            toast('UID 或密码错误');
-            return;
+    // 处理 Supabase 重复键报错
+    function handleSupabaseError(error) {
+        if (error.message.includes('unique constraint')) {
+            if (error.message.includes('email')) return '该邮箱已被注册！';
+            if (error.message.includes('username')) return '该用户名已被占用！';
+            return '用户名或邮箱已存在！';
         }
+        return error.message;
+    }
 
-        // 登录成功
+    /* ================= 登录/注册 UI 逻辑 ================= */
+    $('#tabLogin').addEventListener('click', () => {
+        $('#tabLogin').classList.add('active'); $('#tabRegister').classList.remove('active');
+        $('#loginForm').classList.remove('hidden'); $('#registerForm').classList.add('hidden');
+    });
+    $('#tabRegister').addEventListener('click', () => {
+        $('#tabRegister').classList.add('active'); $('#tabLogin').classList.remove('active');
+        $('#registerForm').classList.remove('hidden'); $('#loginForm').classList.add('hidden');
+    });
+
+    /* ================= 登录逻辑 (支持用户名或邮箱) ================= */
+    async function login() {
+        const account = $('#loginAccount').value.trim();
+        const pwd = $('#loginPassword').value.trim();
+        if (!account || !pwd) return toast('请输入账号和密码');
+
+        // Supabase .or() 可以同时匹配多个条件
+        const { data, error } = await supabase.from('users')
+            .select('*')
+            .or(`username.eq.${account},email.eq.${account}`)
+            .eq('password', pwd)
+            .maybeSingle(); // 用 maybeSingle 防报错
+        
+        if (error) return toast(error.message);
+        if (!data) return toast('账号或密码错误');
+
         state.currentUser = data;
-        localStorage.setItem('zari_uid', uid);
+        localStorage.setItem('zari_uid', data.uid);
         enterMainApp();
         toast('登录成功');
     }
 
+    /* ================= 注册逻辑 (默认user) ================= */
+    async function register() {
+        const username = $('#regUsername').value.trim();
+        const email = $('#regEmail').value.trim();
+        const password = $('#regPassword').value.trim();
+        
+        if (!username || !email || !password) return toast('请填写完整信息');
+
+        // 强制指定 type 为 'user'
+        const { error } = await supabase.from('users').insert([{ 
+            type: 'user', username, email, password, created_at: fmtDate() 
+        }]);
+
+        if (error) return toast(handleSupabaseError(error));
+        
+        toast('注册成功，请登录');
+        $('#tabLogin').click();
+        $('#loginAccount').value = username;
+    }
+
+    $('#loginBtn').addEventListener('click', login);
+    $('#registerBtn').addEventListener('click', register);
+    $('#loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+    $('#regPassword').addEventListener('keydown', e => { if (e.key === 'Enter') register(); });
+
+    /* ================= 进入/退出 ================= */
     function logout() {
         localStorage.removeItem('zari_uid');
         state.currentUser = null;
         $('#mainApp').classList.add('hidden');
         $('#loginOverlay').classList.remove('hidden');
-        $('#loginUid').value = '';
+        $('#loginAccount').value = '';
         $('#loginPassword').value = '';
     }
 
     function enterMainApp() {
         $('#loginOverlay').classList.add('hidden');
         $('#mainApp').classList.remove('hidden');
-        $('#currentUserLabel').textContent = `${state.currentUser.username} (${state.currentUser.type})`;
+        $('#currentUserLabel').textContent = `${state.currentUser.username}`;
         
-        // 权限控制：只有 superadmin 能看到用户管理按钮
         if (state.currentUser.type === 'superadmin') {
             $('#manageUsersBtn').classList.remove('hidden');
         } else {
             $('#manageUsersBtn').classList.add('hidden');
         }
 
-        // 权限控制：普通用户不能上传和删除
         if (state.currentUser.type === 'user') {
             $('#toggleCodeForm').classList.add('hidden');
             $('#toggleArticleForm').classList.add('hidden');
-            $('#codeList').innerHTML = ''; // 待会加载后渲染时不渲染操作按钮
-            $('#articleList').innerHTML = '';
         } else {
             $('#toggleCodeForm').classList.remove('hidden');
             $('#toggleArticleForm').classList.remove('hidden');
         }
 
-        // 加载数据
-        loadCodes();
-        loadArticles();
+        loadCodes(); loadArticles();
     }
+    $('#logoutBtn').addEventListener('click', logout);
 
-    /* ================= 数据加载 (带权限过滤) ================= */
+    /* ================= 数据加载与渲染 ================= */
     async function loadCodes(){
         const { data, error } = await supabase.from('codes').select('*').order('created_at', { ascending: false });
-        if (error) return toast('加载代码失败: ' + error.message);
-        state.codes = data || [];
-        renderCodes();
+        if (!error) { state.codes = data || []; renderCodes(); }
     }
-
     function renderCodes(){
         const box = $('#codeList');
         if (!state.codes.length) { box.innerHTML = '<p class="empty">还没有代码模板</p>'; return; }
-        
-        // 根据权限决定是否显示删除按钮
         const canDelete = state.currentUser.type !== 'user';
-
         box.innerHTML = state.codes.map(item => `
             <article class="item">
                 <div class="item-head"><h3>${esc(item.name)}</h3>
@@ -320,18 +379,13 @@
 
     async function loadArticles(){
         const { data, error } = await supabase.from('articles').select('*').order('created_at', { ascending: false });
-        if (error) return toast('加载文章失败: ' + error.message);
-        state.articles = data || [];
-        renderArticles();
+        if (!error) { state.articles = data || []; renderArticles(); }
     }
-
     function renderArticles(){
         const box = $('#articleList');
         const list = state.articles.filter(a => a.category === state.category);
         if (!list.length) { box.innerHTML = `<p class="empty">「${esc(state.category)}」分类下还没有文章</p>`; return; }
-        
         const canDelete = state.currentUser.type !== 'user';
-
         box.innerHTML = list.map(item => {
             const preview = (item.content || '').replace(/\s+/g, ' ').slice(0, 100);
             return `<article class="item">
@@ -346,40 +400,37 @@
         }).join('');
     }
 
-    /* ================= 事件绑定 ================= */
-    // 登录
-    $('#loginBtn').addEventListener('click', login);
-    $('#loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
-    
-    // 登出
-    $('#logoutBtn').addEventListener('click', logout);
-
-    // 修改个人资料
+    /* ================= 个人资料修改 ================= */
     $('#profileBtn').addEventListener('click', () => {
         $('#profileUsername').value = state.currentUser.username;
+        $('#profileEmail').value = state.currentUser.email || '';
         $('#profilePassword').value = '';
         $('#profileModal').classList.remove('hidden');
     });
 
     $('#saveProfileBtn').addEventListener('click', async () => {
-        const newUsername = $('#profileUsername').value.trim();
+        const username = $('#profileUsername').value.trim();
+        const email = $('#profileEmail').value.trim();
         const newPassword = $('#profilePassword').value.trim();
-        if (!newUsername) return toast('用户名不能为空');
+        
+        if (!username || !email) return toast('用户名和邮箱不能为空');
 
-        const updates = { username: newUsername };
+        const updates = { username, email };
         if (newPassword) updates.password = newPassword;
 
         const { error } = await supabase.from('users').update(updates).eq('uid', state.currentUser.uid);
-        if (error) return toast('修改失败: ' + error.message);
+        if (error) return toast(handleSupabaseError(error));
 
-        state.currentUser.username = newUsername;
+        state.currentUser.username = username;
+        state.currentUser.email = email;
         if (newPassword) state.currentUser.password = newPassword;
-        $('#currentUserLabel').textContent = `${state.currentUser.username} (${state.currentUser.type})`;
+        
+        $('#currentUserLabel').textContent = `${state.currentUser.username}`;
         $('#profileModal').classList.add('hidden');
         toast('资料已更新');
     });
 
-    // 用户管理 (超管)
+    /* ================= 超管管理用户 ================= */
     $('#manageUsersBtn').addEventListener('click', async () => {
         $('#manageUsersModal').classList.remove('hidden');
         await loadUserList();
@@ -387,55 +438,48 @@
 
     async function loadUserList() {
         const { data, error } = await supabase.from('users').select('*').order('uid', { ascending: true });
-        if (error) return toast('加载用户列表失败');
+        if (error) return toast('加载失败');
         const container = $('#userListContainer');
         container.innerHTML = data.map(u => `
-            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee; font-size:14px;">
-                <span>UID: ${u.uid} | ${esc(u.username)} (${u.type})</span>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee; font-size:13px;">
+                <span>UID: ${u.uid} | <b>${esc(u.username)}</b> (${u.type})<br><span style="color:#888">${esc(u.email||'无邮箱')}</span></span>
                 ${u.type !== 'superadmin' ? `<button class="btn danger" style="padding:2px 8px; font-size:12px;" onclick="deleteUser(${u.uid})">删除</button>` : ''}
             </div>
         `).join('');
     }
 
-    // 注册新用户
     $('#registerUserBtn').addEventListener('click', async () => {
         const username = $('#newUserUsername').value.trim();
+        const email = $('#newUserEmail').value.trim();
         const password = $('#newUserPassword').value.trim();
         const type = $('#newUserType').value;
         
-        if (!username || !password) return toast('用户名和密码不能为空');
+        if (!username || !email || !password) return toast('请填写完整');
 
-        // 不传 uid，让 Supabase 自动分配
-        const { error } = await supabase.from('users').insert([{ type, username, password, created_at: fmtDate() }]);
-        if (error) return toast('注册失败: ' + error.message);
+        const { error } = await supabase.from('users').insert([{ type, username, email, password, created_at: fmtDate() }]);
+        if (error) return toast(handleSupabaseError(error));
         
         toast('注册成功');
-        $('#newUserUsername').value = '';
-        $('#newUserPassword').value = '';
+        $('#newUserUsername').value = ''; $('#newUserEmail').value = ''; $('#newUserPassword').value = '';
         await loadUserList();
     });
 
-    // 供用户列表调用的删除方法
     window.deleteUser = async (uid) => {
         if (!confirm('确定删除该用户吗？')) return;
         const { error } = await supabase.from('users').delete().eq('uid', uid);
-        if (error) return toast('删除失败');
-        toast('用户已删除');
-        await loadUserList();
+        if (!error) { toast('已删除'); await loadUserList(); }
     };
 
-    // 切换分类
+    /* ================= 文章/代码操作 ================= */
     $('#tabs').addEventListener('click', (e) => {
         const tab = e.target.closest('.tab'); if (!tab) return;
         document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
         tab.classList.add('active'); state.category = tab.dataset.cat; renderArticles();
     });
 
-    // 阅读文章
     $('#articleList').addEventListener('click', (e) => {
-        const t = e.target;
-        if (t.dataset.read) {
-            const item = state.articles.find(a => a.id === t.dataset.read);
+        if (e.target.dataset.read) {
+            const item = state.articles.find(a => a.id === e.target.dataset.read);
             if (item) {
                 $('#modalTitle').textContent = item.title;
                 $('#modalMeta').textContent = `${item.category} · ${item.created_at}`;
@@ -446,7 +490,6 @@
     });
     $('#modalClose').addEventListener('click', () => $('#readModal').classList.add('hidden'));
 
-    // 删除文章/代码
     $('#codeList').addEventListener('click', async (e) => {
         if (e.target.dataset.delCode) {
             if (!confirm('确定删除吗？')) return;
@@ -467,7 +510,6 @@
         }
     });
 
-    // 上传表单的切换与提交
     $('#toggleCodeForm').addEventListener('click', () => $('#codeForm').classList.toggle('hidden'));
     $('#codeForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -490,19 +532,13 @@
         btn.addEventListener('click', () => { const form = document.getElementById(btn.dataset.cancel); form.reset(); form.classList.add('hidden'); });
     });
 
-    /* ================= 初始化自动登录 ================= */
+    /* ================= 初始化 ================= */
     (async function init() {
         const savedUid = localStorage.getItem('zari_uid');
         if (savedUid) {
-            // 尝试用保存的 uid 恢复登录
-            const { data, error } = await supabase.from('users').select('*').eq('uid', savedUid).single();
-            if (!error && data) {
-                state.currentUser = data;
-                enterMainApp();
-                return;
-            }
+            const { data } = await supabase.from('users').select('*').eq('uid', savedUid).single();
+            if (data) { state.currentUser = data; enterMainApp(); return; }
         }
-        // 无有效登录，显示登录框
         $('#loginOverlay').classList.remove('hidden');
     })();
 </script>
